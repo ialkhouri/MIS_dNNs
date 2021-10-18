@@ -1,4 +1,4 @@
-# MIS_dNNs
+# Finding Maximum Independent Sets using dataless Nueral Networks (MIS dNNs)
 
-This the repo for the AISTATS2022 submitted paper "A Differentiable Approach to Combinatorial Optimization using Dataless Neural Networks".
+This is the repo for the AISTATS2022 submitted paper "A Differentiable Approach to Combinatorial Optimization using Dataless Neural Networks".
 
