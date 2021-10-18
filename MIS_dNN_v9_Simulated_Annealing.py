@@ -1,21 +1,10 @@
-import keras.initializers
-import matplotlib.pyplot as plt
+
 import networkx as nx
 import numpy as np
 import itertools
 import time
-import dwave_networkx as dnx
-from tensorflow.keras import Input, Model
-from numpy import linalg as LA
 import tensorflow as tf
 from tensorflow.keras import layers
-from keras.layers import Dense, Dropout, Conv2D, MaxPool2D, Flatten, Activation,AveragePooling2D,Reshape
-#from keras.layers import My
-import cplex
-from scipy.spatial.distance import jensenshannon
-from scipy.optimize import minimize
-from scipy.optimize import Bounds
-import scipy
 ##################################################################################################
 ############################## steps: ############################################################
 ##################################################################################################
@@ -307,35 +296,9 @@ def MAXIMAL_IS_checker_2(SET, G):
     return MAXIMAL_IS_Tester
 
 
-##################################################################################################
-##################################################################################################
-############################## generate fully connected graph of N_number_of_nodes nodes and
-############################## and remove number_of_cutEdges_fromFullyConnected edges randomly
-##################################################################################################
-# G = nx.complete_graph(N_number_of_nodes)
-# ###### ACCOUNT FOR G'
-#
-#
 
-#
-# ################################### generate random graphs
-# N_number_of_nodes_org = 200
-# M_number_of_edges_org = 1000
-# G = nx.generators.dense_gnm_random_graph(N_number_of_nodes_org, M_number_of_edges_org, seed=1)
-#
-
-################################### save the graph. Format: G_<number of nodes>_<number of edges>_<index>
-#nx.write_gpickle(G,"/home/user/Desktop/ISMAIL/SSLTL/SSLTL_project/RL_adv_attacks_LP/Saved_graphs/G_200_10000_1.gpickle")
-
-#nx.write_gpickle(G,"/home/user/Desktop/ISMAIL/SSLTL/SSLTL_project/RL_adv_attacks_LP/BOSScombiMIS_2021/SNAP_graphs_text_files/G_bitcoin_alpha_reduced.gpickle")
-#
 # # ################################### Load graph
-# G = nx.read_gpickle("/home/user/Desktop/ISMAIL/SSLTL/SSLTL_project/RL_adv_attacks_LP/BOSScombiMIS_2021/SNAP_graphs_text_files/G_slash0902_LPredOnly.gpickle")
-#G = nx.read_gpickle("/home/user/Desktop/ISMAIL/SSLTL/SSLTL_project/RL_adv_attacks_LP/BOSScombiMIS_2021/SNAP_graphs_text_files/G_ego_facebook_LPredOnly_subgraph_LPred_sub1_LPred.gpickle")
-#G = nx.read_gpickle("/home/user/Desktop/ISMAIL/SSLTL/SSLTL_project/RL_adv_attacks_LP/BOSScombiMIS_2021/SNAP_graphs_text_files/G_bitcoin_otc_LPredOnly.gpickle")
-G = nx.read_gpickle("/home/user/Desktop/ISMAIL/SSLTL/SSLTL_project/RL_adv_attacks_LP/BOSScombiMIS_2021/SAT/SATLIB_cnf_uniform_random_3SAT/uf20_91/uf20-01.gpickle")
-# N_number_of_nodes_org = len(G.nodes)
-# M_number_of_edges_org = len(G.edges)
+G = nx.read_gpickle("/directory/graph.gpickle")
 
 # # ################################## plotting the graph with
 # nx.draw(G,with_labels=True)
@@ -351,26 +314,10 @@ M_number_of_edges_comp = (N_number_of_nodes*(N_number_of_nodes-1)/2) - M_number_
 
 print('break')
 
-# ##################################################################################################
-# ##################################################################################################
-# ############################## NetworkX solver for maximal-IS from 1992 paper:
-# # ##############################Approximating maximum independent sets by excluding subgraphs
-# ##############################
-# ##################################################################################################
-# #MaximalIS_nx = nx.maximal_independent_set(G)
-# start_nx = time.time()
-# Maximum_IS_nx = nx.approximation.maximum_independent_set(G)
-# Maximum_IS_nx = list(Maximum_IS_nx)
-# end_nx = time.time()
-# #print("MAXIMAL [WITH TRIMMED] = ", MaximalIS_nx, 'with length = ', len(MaximalIS_nx)+pendant_nodes_cnt+isolated_cntr)
-# print("Maximum_IS_nx [WITH TRIMMED] = ", Maximum_IS_nx, 'with length = ', len(Maximum_IS_nx), "+ LP redced nodes ",number_to_added_toSet_fromLP ,'; TOTAL = ',len(Maximum_IS_nx)+number_to_added_toSet_fromLP, "solution took = ", end_nx-start_nx, "seconds")
-# #print("MAXIMAL [WITH TRIMMED] = ", MaximalIS_nx, 'with length = ', len(MaximalIS_nx)+pendant_nodes_cnt+NUMBER_of_nodes_tobe_added_from_LP_reduction)
-
 
 ##################################################################################################
 ##################################################################################################
-############################## Constructing p from graph G based on the theorem
-##############################
+############################## Constructing p from graph G
 ##################################################################################################
 
 n_inputss   = N_number_of_nodes
@@ -378,10 +325,6 @@ m_outputs   = M_number_of_edges
 m_outputs_c = int(M_number_of_edges_comp)
 
 NN_output = 1
-
-
-
-
 
 ##################################################################################################
 ##################################################################################################
@@ -397,23 +340,14 @@ idependent_set_size = 100*N_number_of_nodes # THIS IS SET TO HAVE THE MAXIMAL !!
 
 idependent_set_size = N_number_of_nodes**2
 
-# never use k=3
-#CLIQUE_size_k = 4 # Question: for larger graphs, how do we select k?
-
-#parameter_eps = 1 - np.sqrt(1-(1/(CLIQUE_size_k+1)))
-
-
-
 #### This is the numpy array we need to update the weights of the first set
 first_set_of_weights = np.zeros(shape=(n_inputss,n_inputss+m_outputs+m_outputs_c))
 
-## add here from graph:
-# adding the connection from nodes in the graph
+#### add here from graph:
 for i in range(n_inputss):
     first_set_of_weights[i,i] = 1.0 # tis stays the same
 
 
-################# BETTER CODE BELOW TWO LOOPS !!!!!!!!
 #### adding the connection from nodes in the graph to the first bottom m relu functions (edges in G)
 idx=0
 for pair in G.edges:
@@ -447,8 +381,7 @@ second_set_of_weights[:,0][n_inputss+m_outputs :          ]   = -1.0
 
 
 second_set_of_biases = np.zeros(shape=(1))
-#second_set_of_biases[0] = idependent_set_size/2
-#second_set_of_biases[0] = (n_inputss-1)/2
+
 
 W_1 = tf.convert_to_tensor(first_set_of_weights, dtype=tf.float32)
 W_2 = tf.convert_to_tensor(second_set_of_weights, dtype=tf.float32)
@@ -472,7 +405,6 @@ def my_init_b_2(shape , dtype=tf.float32):
 ##########################################################################################################
 
 
-######### get the digonal matrix that represents the only trinable paramter in the combined net
 Z_shape_input  = n_inputss+m_outputs+m_outputs_c
 
 
@@ -570,9 +502,6 @@ for init_index in range(number_of_initilizations):
     ##################################################################################################
     ##################################################################################################
 
-    #batch_size_gen = Z_shape_input
-    #batch_size_gen = n_inputss+m_outputs
-    #batch_size_gen = n_inputss
     batch_size_gen = 1
     batch_size_2 = batch_size_gen
 
@@ -617,9 +546,7 @@ for init_index in range(number_of_initilizations):
     for i in range(training_steps):
 
         combined_NN_p.fit(X_train, Y_train_combined, epochs=2*n_inputss, batch_size=1, verbose=0)
-        #combined_NN_p.fit(X_train, Y_train_combined, epochs=1, batch_size=1, verbose=0)
 
-        # the weights are to be checked here !!!!!!!! Be careful !!!!!!!!
         x = combined_NN_p.layers[0].get_weights()[0]
 
 
@@ -660,15 +587,11 @@ for init_index in range(number_of_initilizations):
             for ii in range(n_inputss):
                 if X_star[ii] > winning_threshold:
                     X_star_thresholded[ii] = 1
-            #        X_MIN_VALUE_TEST[ii] = 1/X_star[ii]
-            #length = np.count_nonzero(X_star_thresholded)
             length = np.count_nonzero(X_star_thresholded) + solution_improve_alg(X_star_thresholded, G,
                                                                                  np.count_nonzero(X_star_thresholded))
 
-            #print("MAXIMAL-IS IS FOUND AT training step = ", i, "; Cardinality Ours = ", [length], "; value = ", v_theta.numpy()[0], "; threshold", winning_threshold, "; execution time (sec) = ", end-start)
-            #print("MINIMAL VALUE WITH ONES AT THE FOUND MIS IS = ", combined_NN_p(X_MIN_VALUE_TEST), "; (Cardinality Ours(without reductions))^2 = ", [-0.5*(length**2)])
             print("MAXIMAL-IS IS FOUND AT training step = ", i, "; Cardinality Ours = ", [length], "for init = ", init_index)
-            #if length >= 285:
+            #if length >= some_value_if_known:
             Solution_pool_length.append(length)
             break
 
@@ -679,38 +602,7 @@ for init_index in range(number_of_initilizations):
 
 print('Solution_pool = ', [Solution_pool_length])
 
-# ##################### this the threshold we apply on X_star to get the MIS
-#
-# X_star_thresholded = np.zeros(shape=(n_inputss))
-# for i in range(n_inputss):
-#     if X_star[i] > winning_threshold:
-#         X_star_thresholded[i] = 1
-#
-#
-# ##################### IS and Maximal-IS checker:
-# Max_IS = MAXIMAL_IS_checker(X_star_thresholded, G, winning_threshold)
-# #IS____ =
-#
-#
-# ##################### plot
-#
-# list_of_nonZeros_nodes = list(np.nonzero(X_star_thresholded)[0])
-# # generate node positions:
-# pos = nx.spring_layout(G)
-# # draw graph
-# nx.draw_networkx(G, pos=pos, font_size=16, node_color='blue', font_color='white')
-# # draw subgraph for highlights
-# nx.draw_networkx(G.subgraph(list_of_nonZeros_nodes), pos=pos, font_size=16, node_color='red', font_color='white')
-# plt.draw()
-# plt.show()
 
-
-
-########## we need leng and checker:
-
-#length = np.count_nonzero(X_star_thresholded)
-#if MAXIMAL_IS_checker(X_star,G, winning_threshold)==1: print("The solution of nodes ", list_of_nonZeros_nodes,  " is a Maximal-IS with cardinality = ", length)
-#if IS_checker(X_star,G, winning_threshold)        ==1: print("The solution of nodes ", list_of_nonZeros_nodes,  " is an        IS with cardinality = ", length)
 print('break')
 
 

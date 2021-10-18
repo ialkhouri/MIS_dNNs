@@ -1,30 +1,91 @@
-import keras.initializers
-import matplotlib.pyplot as plt
+
 import networkx as nx
 import numpy as np
 import itertools
 import time
-import dwave_networkx as dnx
-from tensorflow.keras import Input, Model
-from numpy import linalg as LA
 import tensorflow as tf
 from tensorflow.keras import layers
-from keras.layers import Dense, Dropout, Conv2D, MaxPool2D, Flatten, Activation,AveragePooling2D,Reshape
-#from keras.layers import My
-import cplex
-from scipy.spatial.distance import jensenshannon
-from scipy.optimize import minimize
-from scipy.optimize import Bounds
-import scipy
+
+
 ##################################################################################################
-############################## steps: ############################################################
+##################################################################################################
+############################## IS and Maximal IS checker fucntions ###############################
+##################################################################################################
 ##################################################################################################
 
-#print('break')
 
-# number of nodes to be tried
+def IS_checker(X_star, G, th):
+    X_star_thresholded = np.zeros(shape=(n_inputss))
+    for i in range(n_inputss):
+        if X_star[i] > th:
+            X_star_thresholded[i] = 1
+
+    list_of_nonZeros_nodes = list(np.nonzero(X_star_thresholded)[0])
+    IS_Tester = 1
+
+    # combinations to be checked from the X_star
+    combos_list = list(itertools.combinations(list_of_nonZeros_nodes, 2))
+
+    for pair in combos_list:
+        if pair in G.edges:
+            IS_Tester = 0
+            print("THIS IS NOT AN IS DUE TO THE EDGE BETWEEN", pair)
+            break
+
+    return IS_Tester
+
+
+def MAXIMAL_IS_checker(X_star, G, th):
+    def intersection(lst1, lst2):
+        return list(set(lst1) & set(lst2))
+
+    X_star_thresholded = np.zeros(shape=(n_inputss))
+    for i in range(n_inputss):
+        if X_star[i] > th:
+            X_star_thresholded[i] = 1
+
+    list_of_nonZeros_nodes = list(np.nonzero(X_star_thresholded)[0])
+    MAXIMAL_IS_Tester = 0
+    flag = 0
+    # check whether the nodes in list_of_nonZeros_nodes are actually an IS ? ; If not, exit the function with MAXIMAL_IS_checker == 0
+    for node in list_of_nonZeros_nodes:
+
+        # list_of_nonZeros_nodes_otherThanNode = np.setdiff1d(node, list_of_nonZeros_nodes)
+
+        niebors = list(G[node])
+
+        if intersection(list(G[node]), list_of_nonZeros_nodes) != []:
+            # print("THIS IS NOT AN IS ")
+            flag = 1
+            break
+
+    # MAXIMAL_IS_Tester = 0
+
+    # below is to take out the case of having only one node !!!
+    if len(list_of_nonZeros_nodes) > 1 and flag == 0:
+        #### let the obtained Maximal-IS set be Q* with |Q|=L where L<n
+        #### get Q^*
+
+        nodes_Q_star = list_of_nonZeros_nodes
+        nodes_G_not_in_Q_star = np.setdiff1d((G.nodes), nodes_Q_star)
+        list_to_check = []
+        for node in nodes_G_not_in_Q_star:
+            # get the niebors
+            niebors = list(G[node])
+            if intersection(niebors, nodes_Q_star) != []:
+                list_to_check.append(1)
+
+        # print("WE are GOOD if number of ones = ", np.sum(list_to_check), " ; it should be = ", len(nodes_G_not_in_Q_star))
+
+        if np.sum(list_to_check) == len(nodes_G_not_in_Q_star):
+            MAXIMAL_IS_Tester = 1
+            # print("we are good")
+
+    return MAXIMAL_IS_Tester
+
+
 number_of_nodes_list = list(range(550,1050,25))
-#number_of_nodes_list = [50, 100]
+
 
 number_of_edges_list = 10*number_of_nodes_list
 
@@ -63,24 +124,20 @@ for index in range(len(number_of_nodes_list)):
 
         ##################################################################################################
         ##################################################################################################
-        ############################## NetworkX solver for maximal-IS from 1992 paper:
+        ############################## NetworkX MIS solver  from 1992 paper:
         # ##############################Approximating maximum independent sets by excluding subgraphs
         ##############################
         ##################################################################################################
+        ## below is the maximal-IS solver
         #MaximalIS_nx = nx.maximal_independent_set(G)
+        ## This is the maximum-IS solver
         start_nx = time.time()
         Maximum_IS_nx = nx.approximation.maximum_independent_set(G)
         Maximum_IS_nx = list(Maximum_IS_nx)
         end_nx = time.time()
-        #print("MAXIMAL [WITH TRIMMED] = ", MaximalIS_nx, 'with length = ', len(MaximalIS_nx)+pendant_nodes_cnt+isolated_cntr)
-        #print("Maximum_IS_nx [WITH TRIMMED] = ", Maximum_IS_nx, 'with length = ', len(Maximum_IS_nx))
-        #print("solution took = ", end_nx-start_nx, "seconds")
-        #print("MAXIMAL [WITH TRIMMED] = ", MaximalIS_nx, 'with length = ', len(MaximalIS_nx)+pendant_nodes_cnt+NUMBER_of_nodes_tobe_added_from_LP_reduction)
 
         MIS_NWx_size.append(len(Maximum_IS_nx))
         MIS_NWx_time.append(end_nx-start_nx)
-
-
 
         ##################################################################################################
         ##################################################################################################
@@ -91,89 +148,6 @@ for index in range(len(number_of_nodes_list)):
         n_inputss   = N_number_of_nodes
         m_outputs   = M_number_of_edges
         m_outputs_c = int(M_number_of_edges_comp)
-
-        ##################################################################################################
-        ##################################################################################################
-        ############################## IS and Maximal IS checker fucntions ###############################
-        ##################################################################################################
-        ##################################################################################################
-
-
-
-
-
-        def IS_checker(X_star,G, th):
-            X_star_thresholded = np.zeros(shape=(n_inputss))
-            for i in range(n_inputss):
-                if X_star[i] > th:
-                    X_star_thresholded[i] = 1
-
-            list_of_nonZeros_nodes = list(np.nonzero(X_star_thresholded)[0])
-            IS_Tester = 1
-
-            # combinations to be checked from the X_star
-            combos_list = list(itertools.combinations(list_of_nonZeros_nodes,2))
-
-            for pair in combos_list:
-                if pair in G.edges:
-                    IS_Tester = 0
-                    print("THIS IS NOT AN IS DUE TO THE EDGE BETWEEN", pair)
-                    break
-
-            return IS_Tester
-
-        def MAXIMAL_IS_checker(X_star, G, th):
-            def intersection(lst1, lst2):
-                return list(set(lst1) & set(lst2))
-            X_star_thresholded = np.zeros(shape=(n_inputss))
-            for i in range(n_inputss):
-                if X_star[i] > th:
-                    X_star_thresholded[i] = 1
-
-
-
-            list_of_nonZeros_nodes = list(np.nonzero(X_star_thresholded)[0])
-            MAXIMAL_IS_Tester = 0
-            flag = 0
-            # check whether the nodes in list_of_nonZeros_nodes are actually an IS ? ; If not, exit the function with MAXIMAL_IS_checker == 0
-            for node in list_of_nonZeros_nodes:
-
-                #list_of_nonZeros_nodes_otherThanNode = np.setdiff1d(node, list_of_nonZeros_nodes)
-
-                niebors = list(G[node])
-
-                if intersection( list(G[node]) ,list_of_nonZeros_nodes) != []:
-                    #print("THIS IS NOT AN IS ")
-                    flag = 1
-                    break
-
-
-
-            #MAXIMAL_IS_Tester = 0
-
-            # below is to take out the case of having only one node !!!
-            if len(list_of_nonZeros_nodes) > 1 and flag == 0:
-                #### let the obtained Maximal-IS set be Q* with |Q|=L where L<n
-                #### get Q^*
-
-                nodes_Q_star = list_of_nonZeros_nodes
-                nodes_G_not_in_Q_star = np.setdiff1d((G.nodes), nodes_Q_star)
-                list_to_check = []
-                for node in nodes_G_not_in_Q_star:
-                    # get the niebors
-                    niebors = list(G[node])
-                    if intersection(niebors, nodes_Q_star) != []:
-                        list_to_check.append(1)
-
-                #print("WE are GOOD if number of ones = ", np.sum(list_to_check), " ; it should be = ", len(nodes_G_not_in_Q_star))
-
-                if np.sum(list_to_check) == len(nodes_G_not_in_Q_star):
-                    MAXIMAL_IS_Tester = 1
-                    #print("we are good")
-
-            return MAXIMAL_IS_Tester
-
-
 
 
         ##################################################################################################
@@ -253,7 +227,7 @@ for index in range(len(number_of_nodes_list)):
         ##########################################################################################################
         ##########################################################################################################
 
-        ######## get the digonal matrix that represents the only trinable paramter in the combined net
+
 
         Z_shape_input  = n_inputss+m_outputs+m_outputs_c
 
@@ -362,16 +336,13 @@ for index in range(len(number_of_nodes_list)):
         Y_desired = Y_val_combined
         Y_val_combined = Y_val_combined.reshape(1,1,1)
         Y_val_combined = Y_val_combined.reshape(1,1)
-        #Y_val_combined = Y_val_combined.reshape(3)
-        #print('break: preparing repeated dataset is done')
-
 
         ############################################################
         ### train
         ################################################################
 
 
-        training_steps = 5
+        training_steps = 100
 
 
         start = time.time()
@@ -414,7 +385,7 @@ for index in range(len(number_of_nodes_list)):
                     [N_number_of_nodes, M_number_of_edges, seed_value, len(Maximum_IS_nx), end_nx - start_nx, length, end-start])
 
                 print("MAXIMAL-IS IS FOUND AT training step = ", i, "; Cardinality Ours vs. NWx Alg.  = ", [length,len(Maximum_IS_nx)], "; value = ", v_theta.numpy()[0], "; threshold", winning_threshold, "; execution time (sec) = ", end-start)
-                #print("MINIMAL VALUE WITH ONES AT THE FOUND MIS IS = ", combined_NN_p(X_MIN_VALUE_TEST), "; (Cardinality Ours(without reductions))^2 = ", [-0.5*(length**2)])
+
                 break
 
             # logger:
@@ -425,38 +396,8 @@ for index in range(len(number_of_nodes_list)):
 
 
 ############### save results:
-print("THIS IS TO CONFIRM THAT THE PROCESS IS FINISHED AND WE ARE SAVING SHIT CORRECTLY")
-np.save("/home/user/Desktop/ISMAIL/SSLTL/SSLTL_project/RL_adv_attacks_LP/BOSScombiMIS_2021/Avg_results_OSS_vs_NWx_3.npy",Avg_results_OSS_vs_NWx)
+print("THIS IS TO CONFIRM THAT THE PROCESS IS FINISHED AND WE ARE SAVING the data CORRECTLY...")
+np.save("directory",Avg_results_OSS_vs_NWx)
 
 print('break')
-
-
-# ######################################################################################
-# ##################### this the threshold we apply on X_star to get the MIS ###########
-# ######################################################################################
-# X_star_thresholded = np.zeros(shape=(n_inputss))
-# for i in range(n_inputss):
-#     if X_star[i] > winning_threshold:
-#         X_star_thresholded[i] = 1
-#
-#
-# ##################### IS and Maximal-IS checker:
-# Max_IS = MAXIMAL_IS_checker(X_star_thresholded, G, winning_threshold)
-# #IS____ =
-#
-#
-# ##################### plot
-#
-# list_of_nonZeros_nodes = list(np.nonzero(X_star_thresholded)[0])
-# # generate node positions:
-# pos = nx.spring_layout(G)
-# # draw graph
-# nx.draw_networkx(G, pos=pos, font_size=16, node_color='blue', font_color='white')
-# # draw subgraph for highlights
-# nx.draw_networkx(G.subgraph(list_of_nonZeros_nodes), pos=pos, font_size=16, node_color='red', font_color='white')
-# plt.draw()
-# plt.show()
-
-
-
 

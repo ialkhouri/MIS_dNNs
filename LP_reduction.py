@@ -1,36 +1,15 @@
-import keras.initializers
-import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-import itertools
-import time
-import dwave_networkx as dnx
-from tensorflow.keras import Input, Model
-from numpy import linalg as LA
-import tensorflow as tf
-from tensorflow.keras import layers
-from keras.layers import Dense, Dropout, Conv2D, MaxPool2D, Flatten, Activation,AveragePooling2D,Reshape
-#from keras.layers import My
 import cplex
-from scipy.spatial.distance import jensenshannon
-from scipy.optimize import minimize
-from scipy.optimize import Bounds
-import scipy
 
-################################### Load graph
-#G = nx.read_gpickle("/home/user/Desktop/ISMAIL/SSLTL/SSLTL_project/RL_adv_attacks_LP/BOSScombiMIS_2021/SNAP_graphs_text_files/G_ego_facebook_LPredOnly_subgraph_LPred_sub2.gpickle")
-#G = nx.read_gpickle("/home/user/Desktop/ISMAIL/SSLTL/SSLTL_project/RL_adv_attacks_LP/BOSScombiMIS_2021/SNAP_graphs_text_files/G_ego_facebook_LPredOnly_subgraph_LPred_sub2.gpickle")
-G = nx.read_gpickle("/home/user/Desktop/ISMAIL/SSLTL/SSLTL_project/RL_adv_attacks_LP/BOSScombiMIS_2021/Walshaw_graphs/G_case9.gpickle")
+################################### Load graph to be reduced
+
+G = nx.read_gpickle("graph_to_be_reduced.gpickle")
 
 
 N_number_of_nodes_org = len(G.nodes)
 M_number_of_edges_org = len(G.edges)
 
-
-# ################################### generate random graphs
-# N_number_of_nodes_org = 50
-# M_number_of_edges_org = 100
-# G = nx.generators.dense_gnm_random_graph(N_number_of_nodes_org, M_number_of_edges_org, seed=9)
 
 
 # # ################################## plotting the graph with
@@ -39,7 +18,7 @@ M_number_of_edges_org = len(G.edges)
 # plt.show()
 
 
-###### Question: When there is an LP reduction, do we always end up with a reduced graph thta consists of disjoint subgraphs?
+###### Question: When we use LP reduction, do we always end up with a reduced graph thta consists of disjoint subgraphs?
 ## Answer: not always
 
 
@@ -54,10 +33,6 @@ for pair in list(G.edges):
         print("self loop in node {} is removed".format([pair[0]]))
 print("ALREADY REMOVED {} EDGES BECAUSE OF SELF LOOP".format(self_loop_removal_cntr))
 
-
-###################################################################################################################
-################################# reducntion techiniques come here: ###############################################
-###################################################################################################################
 
 
 #############################################################
@@ -98,7 +73,7 @@ for (u,v) in list_of_pairs_of_edges:
 
 
 ## write program for testing
-#problem.write("LP_test_BOSS_combi.lp")
+#problem.write("LP_test.lp")
 problem.solve()
 
 if problem.solution.get_solution_type() == 0:
@@ -138,7 +113,7 @@ if problem.solution.get_solution_type() != 0:
 
 
 print("NUMBER of nodes in the MIS that we got from the LP", len(nodes_tobe_removed[0]))
-nx.write_gpickle(G,"/home/user/Desktop/ISMAIL/SSLTL/SSLTL_project/RL_adv_attacks_LP/BOSScombiMIS_2021/Walshaw_graphs/G_case9_LPred.gpickle")
+nx.write_gpickle(G,"/directory/G_LP_reduced.gpickle")
 
 
 print("break")
@@ -160,7 +135,7 @@ M_number_of_edges = len((G.edges))
 
 M_number_of_edges_comp = (N_number_of_nodes*(N_number_of_nodes-1)/2) - M_number_of_edges
 
-print("Before removing (pendent and isolated) and merging (n,m) = {} after removing (pendent and isolated) and merging (n,m) = {}".format([N_number_of_nodes_org, M_number_of_edges_org],[N_number_of_nodes, M_number_of_edges]))
+print("Before LP {} - After LP  {}".format([N_number_of_nodes_org, M_number_of_edges_org],[N_number_of_nodes, M_number_of_edges]))
 
 
 print('break')
