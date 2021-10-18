@@ -9,4 +9,4 @@ This is the repo for the AISTATS2022 submitted paper "A Differentiable Approach 
 - networkx
 - cplex
 - numpy
-- scikit-image
+
