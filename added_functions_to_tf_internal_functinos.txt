@@ -1,0 +1,61 @@
+########################################################################################################################
+############################## Here we describe the internal custom functions that we add to TF for: 
+########################################################################################################################
+############(1)############################## Point-wise multiplication.#######################################################
+
+##### add below to TF2 core.py
+
+#class MyDenseLayer(tf.keras.layers.Layer):
+#@keras_export('keras.layers.MyDenseLayer')
+class MyDenseLayer(Layer):
+  def __init__(self,
+               num_outputs=None,
+               kernel_initializer=None,
+               kernel_constraint = None):
+    super(MyDenseLayer, self).__init__()
+    self.num_outputs = num_outputs
+    self.kernel_initializer= kernel_initializer
+    self.kernel_constraint = kernel_constraint
+
+  def build(self, input_shape):
+    self.kernel = self.add_weight("kernel",
+                                  shape=[self.num_outputs],
+                                  trainable=True,
+                                  initializer=self.kernel_initializer,
+                                  constraint = self.kernel_constraint)
+
+  def call(self, inputs):
+    temp = tensorflow.math.multiply(inputs, self.kernel)
+    return tensorflow.reshape(temp,[1,self.num_outputs])
+
+
+
+
+
+############(2)############################## (2) Contraining the trainable weights to be im [0,1].#######################################################
+
+######### add below to TF2 constraints.py
+@keras_export('keras.constraints.zeroOne')
+class zeroOne(Constraint):
+  """Constrains each value of weight tensors to be between [0,1]"""
+
+  #def __init__(self, min_value, max_value):
+
+
+  def __call__(self, w):
+      min_value = 0.0
+      max_value = 1.0
+      #min_value = 0.0
+      #max_value = 1.0
+      return K.clip(w, min_value, max_value)
+
+  def get_config(self):
+      min_value = 0.0
+      max_value = 1.0
+      #min_value = 0.0
+      #max_value = 1.0
+      return {'min_value': min_value,
+              'max_value': max_value}
+
+
+
