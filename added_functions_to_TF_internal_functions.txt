@@ -32,7 +32,7 @@ class MyDenseLayer(Layer):
 
 
 
-############(2)############################## (2) Contraining the trainable weights to be im [0,1].#######################################################
+############(2)############################## (2) Constraining the trainable weights to be in [0,1].#######################################################
 
 ######### add below to TF2 constraints.py
 @keras_export('keras.constraints.zeroOne')
